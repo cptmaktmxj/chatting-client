@@ -3,6 +3,7 @@
 #include <cassert>
 #include <string>
 
+// 공통 문자열 유틸리티가 기대한 값을 반환하는지 검증하는 테스트 진입점입니다.
 int main() {
     assert(trim_copy("  hello  ") == "hello");
     assert(trim_copy("\n\t/quit\r\n") == "/quit");

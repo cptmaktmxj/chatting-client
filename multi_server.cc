@@ -73,11 +73,13 @@ int next_client_id = 1;
 int next_message_id = 1;
 std::string state_path = "chat_state.db";
 
+// 치명적인 서버 오류를 출력하고 프로세스를 종료합니다.
 void error_handling(const char* message) {
     perror(message);
     exit(1);
 }
 
+// 지정한 구분자로 문자열을 나누어 토큰 목록을 만듭니다.
 std::vector<std::string> split(const std::string& text, char delimiter) {
     std::vector<std::string> out;
     std::string item;
@@ -88,6 +90,7 @@ std::vector<std::string> split(const std::string& text, char delimiter) {
     return out;
 }
 
+// 첫 번째 공백 전 토큰과 나머지 문자열을 분리합니다.
 std::string first_token(const std::string& text, std::string* rest) {
     std::string trimmed = trim_copy(text);
     size_t pos = trimmed.find(' ');
@@ -99,6 +102,7 @@ std::string first_token(const std::string& text, std::string* rest) {
     return trimmed.substr(0, pos);
 }
 
+// 문자열 집합을 콤마로 구분된 저장용 문자열로 변환합니다.
 std::string join_set(const std::set<std::string>& values) {
     std::ostringstream oss;
     bool first = true;
@@ -110,6 +114,7 @@ std::string join_set(const std::set<std::string>& values) {
     return oss.str();
 }
 
+// 콤마로 구분된 문자열을 문자열 집합으로 복원합니다.
 std::set<std::string> parse_set(const std::string& text) {
     std::set<std::string> values;
     for (const std::string& item : split(text, ',')) {
@@ -119,6 +124,7 @@ std::set<std::string> parse_set(const std::string& text) {
     return values;
 }
 
+// 상태 파일에 안전하게 저장하도록 특수 문자를 퍼센트 인코딩합니다.
 std::string escape_field(const std::string& text) {
     std::ostringstream oss;
     for (unsigned char ch : text) {
@@ -132,6 +138,7 @@ std::string escape_field(const std::string& text) {
     return oss.str();
 }
 
+// 16진수 문자 하나를 정수 값으로 변환합니다.
 int hex_value(char ch) {
     if (ch >= '0' && ch <= '9') return ch - '0';
     if (ch >= 'a' && ch <= 'f') return ch - 'a' + 10;
@@ -139,6 +146,7 @@ int hex_value(char ch) {
     return -1;
 }
 
+// 퍼센트 인코딩된 상태 파일 필드를 원래 문자열로 복원합니다.
 std::string unescape_field(const std::string& text) {
     std::string out;
     for (size_t i = 0; i < text.size(); i++) {
@@ -156,6 +164,7 @@ std::string unescape_field(const std::string& text) {
     return out;
 }
 
+// 방 타입 열거값을 상태 파일과 출력에 쓰는 문자열로 변환합니다.
 std::string room_type_to_string(RoomType type) {
     switch (type) {
         case ROOM_HIDDEN: return "hidden";
@@ -168,6 +177,7 @@ std::string room_type_to_string(RoomType type) {
     }
 }
 
+// 저장된 방 타입 문자열을 방 타입 열거값으로 변환합니다.
 RoomType parse_room_type(const std::string& type) {
     if (type == "hidden") return ROOM_HIDDEN;
     if (type == "announce") return ROOM_ANNOUNCE;
@@ -177,6 +187,7 @@ RoomType parse_room_type(const std::string& type) {
     return ROOM_NORMAL;
 }
 
+// 보안방 비밀번호를 직접 저장하지 않도록 해시 문자열을 만듭니다.
 std::string hash_password(const std::string& password) {
     std::hash<std::string> hasher;
     size_t value = hasher("chat-room-password:" + password);
@@ -185,6 +196,7 @@ std::string hash_password(const std::string& password) {
     return oss.str();
 }
 
+// 채팅 메시지에 표시할 현재 시각을 HH:MM 형식으로 반환합니다.
 std::string current_time_text() {
     std::time_t now = std::time(NULL);
     struct tm local_tm;
@@ -194,6 +206,7 @@ std::string current_time_text() {
     return std::string(buffer);
 }
 
+// 공개 설정 명령의 on/off 값을 bool 값으로 해석합니다.
 bool parse_on_off(const std::string& value, bool* out) {
     std::string lowered = trim_copy(value);
     std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char ch) {
@@ -210,6 +223,7 @@ bool parse_on_off(const std::string& value, bool* out) {
     return false;
 }
 
+// 버퍼 전체가 소켓에 기록될 때까지 반복 전송합니다.
 bool send_all(int sock, const std::string& data) {
     const char* buf = data.c_str();
     size_t total = 0;
@@ -221,10 +235,12 @@ bool send_all(int sock, const std::string& data) {
     return true;
 }
 
+// 특정 클라이언트에게 메시지를 전송합니다.
 void send_to_client(Client* client, const std::string& message) {
     if (client != NULL) send_all(client->sock, message);
 }
 
+// 새 방의 기본 권한과 소유자 정보를 초기화합니다.
 Room make_room(const std::string& name, RoomType type, const std::string& owner, const std::string& password = "") {
     Room room;
     room.name = name;
@@ -236,6 +252,7 @@ Room make_room(const std::string& name, RoomType type, const std::string& owner,
     return room;
 }
 
+// 잠금이 잡힌 상태에서 방, 링크, 템플릿 정보를 상태 파일에 저장합니다.
 void save_state_unlocked() {
     std::ofstream out(state_path.c_str(), std::ios::trunc);
     for (const auto& pair : rooms) {
@@ -256,6 +273,7 @@ void save_state_unlocked() {
     }
 }
 
+// 상태 파일에서 방, 링크, 템플릿 정보를 읽고 기본 lobby 방을 보장합니다.
 void load_state() {
     pthread_mutex_lock(&state_mutex);
     rooms.clear();
@@ -288,10 +306,12 @@ void load_state() {
     pthread_mutex_unlock(&state_mutex);
 }
 
+// 잠금이 잡힌 상태에서 사용자가 방 관리자인지 확인합니다.
 bool is_admin_unlocked(const Room& room, const std::string& nickname) {
     return room.admins.count(nickname) > 0;
 }
 
+// 잠금이 잡힌 상태에서 사용자가 현재 방에 말할 권한이 있는지 확인합니다.
 bool can_speak_unlocked(const Room& room, const std::string& nickname) {
     if (is_admin_unlocked(room, nickname)) return true;
     if (room.type == ROOM_ANNOUNCE) return false;
@@ -299,10 +319,12 @@ bool can_speak_unlocked(const Room& room, const std::string& nickname) {
     return true;
 }
 
+// 숨김 방에서는 익명 이름을, 일반 방에서는 실제 닉네임을 반환합니다.
 std::string display_name_unlocked(const Room& room, const std::string& nickname) {
     return room.type == ROOM_HIDDEN ? "anonymous" : nickname;
 }
 
+// 잠금이 잡힌 상태에서 닉네임으로 접속 중인 클라이언트를 찾습니다.
 Client* find_client_by_nick_unlocked(const std::string& nickname) {
     for (Client* client : clients) {
         if (client->nickname == nickname) return client;
@@ -310,6 +332,7 @@ Client* find_client_by_nick_unlocked(const std::string& nickname) {
     return NULL;
 }
 
+// 같은 방에 있는 클라이언트들에게 메시지를 전송합니다.
 void broadcast_room(const std::string& room_name, const std::string& message, int except_sock = -1) {
     pthread_mutex_lock(&state_mutex);
     for (Client* client : clients) {
@@ -318,6 +341,7 @@ void broadcast_room(const std::string& room_name, const std::string& message, in
     pthread_mutex_unlock(&state_mutex);
 }
 
+// 오픈링크 1:1 방 참여자와 링크 소유자에게 메시지를 전송합니다.
 void broadcast_private_room(const std::string& room_name, const std::string& owner, const std::string& message, int except_sock = -1) {
     pthread_mutex_lock(&state_mutex);
     for (Client* client : clients) {
@@ -328,6 +352,7 @@ void broadcast_private_room(const std::string& room_name, const std::string& own
     pthread_mutex_unlock(&state_mutex);
 }
 
+// 메시지 기록의 방 타입에 맞춰 반응 알림을 전파합니다.
 void broadcast_for_message(const MessageRecord& record, const std::string& text) {
     if (record.room_type == ROOM_PRIVATE) {
         broadcast_private_room(record.room, record.owner, text);
@@ -336,12 +361,14 @@ void broadcast_for_message(const MessageRecord& record, const std::string& text)
     }
 }
 
+// 접속 종료된 클라이언트를 서버의 클라이언트 목록에서 제거합니다.
 void remove_client(Client* target) {
     pthread_mutex_lock(&state_mutex);
     clients.erase(std::remove(clients.begin(), clients.end(), target), clients.end());
     pthread_mutex_unlock(&state_mutex);
 }
 
+// 현재 생성된 방과 오픈링크 목록을 출력 문자열로 만듭니다.
 std::string room_list_text() {
     pthread_mutex_lock(&state_mutex);
     std::ostringstream oss;
@@ -356,6 +383,7 @@ std::string room_list_text() {
     return oss.str();
 }
 
+// 공개 설정에 따라 보여줄 프로필 문자열을 결정합니다.
 std::string visible_profile_for(const Client* client) {
     if (!client->profile_public) {
         return "private";
@@ -363,6 +391,7 @@ std::string visible_profile_for(const Client* client) {
     return client->profile.empty() ? "(empty)" : client->profile;
 }
 
+// 공개 설정에 따라 보여줄 접속 상태 문자열을 결정합니다.
 std::string visible_status_for(const Client* client) {
     if (!client->profile_public || !client->status_public) {
         return "hidden";
@@ -370,6 +399,7 @@ std::string visible_status_for(const Client* client) {
     return client->status.empty() ? "online" : client->status;
 }
 
+// 현재 방 사용자와 공개 가능한 프로필/상태 정보를 출력 문자열로 만듭니다.
 std::string who_list_text(const std::string& room_name) {
     pthread_mutex_lock(&state_mutex);
     std::ostringstream oss;
@@ -385,6 +415,7 @@ std::string who_list_text(const std::string& room_name) {
     return oss.str();
 }
 
+// 사용자가 특정 메시지를 볼 권한이 있는지 확인합니다.
 bool client_can_see_message_unlocked(Client* client, const MessageRecord& record) {
     if (record.room_type == ROOM_PRIVATE) {
         return client->room == record.room || client->nickname == record.owner;
@@ -392,6 +423,7 @@ bool client_can_see_message_unlocked(Client* client, const MessageRecord& record
     return client->room == record.room;
 }
 
+// 권한을 확인한 뒤 메시지를 기록하고 해당 방에 채팅으로 전송합니다.
 bool send_chat_text(Client* client, const std::string& text) {
     std::string room_name;
     std::string nickname;
@@ -435,6 +467,7 @@ bool send_chat_text(Client* client, const std::string& text) {
     return true;
 }
 
+// 클라이언트를 지정한 방으로 이동시키고 입퇴장 알림을 전송합니다.
 void join_room(Client* client, const std::string& room_name) {
     std::string old_room;
     std::string nickname;
@@ -448,6 +481,7 @@ void join_room(Client* client, const std::string& room_name) {
     send_to_client(client, format_notice_line("joined " + room_name));
 }
 
+// 관리자 권한이 필요한 명령에서 권한 여부를 검사합니다.
 bool require_admin(Client* client, Room& room) {
     if (!is_admin_unlocked(room, client->nickname)) {
         send_to_client(client, format_notice_line("관리자 권한이 필요합니다."));
@@ -456,6 +490,7 @@ bool require_admin(Client* client, Room& room) {
     return true;
 }
 
+// 일반/숨김/공지/승인/보안 방 생성 명령을 처리합니다.
 void create_room_command(Client* client, const std::string& name, RoomType type, const std::string& password = "") {
     std::string room_name = trim_copy(name);
     if (room_name.empty()) {
@@ -475,6 +510,7 @@ void create_room_command(Client* client, const std::string& name, RoomType type,
     join_room(client, room_name);
 }
 
+// 방 입장 요청과 보안방 비밀번호 검증을 처리합니다.
 void handle_join(Client* client, const std::string& room_name, const std::string& password = "") {
     std::string name = trim_copy(room_name);
     if (name.empty()) {
@@ -502,6 +538,7 @@ void handle_join(Client* client, const std::string& room_name, const std::string
     join_room(client, name);
 }
 
+// 오픈채팅 링크 이름과 소유자를 등록합니다.
 void handle_openlink(Client* client, const std::string& link_name) {
     std::string link = trim_copy(link_name);
     if (link.empty()) {
@@ -515,6 +552,7 @@ void handle_openlink(Client* client, const std::string& link_name) {
     send_to_client(client, format_notice_line("openlink " + link + " created"));
 }
 
+// 오픈채팅 링크 입장자를 소유자와의 1:1 방으로 연결합니다.
 void handle_enterlink(Client* client, const std::string& link_name) {
     std::string link = trim_copy(link_name);
     std::string owner;
@@ -538,6 +576,7 @@ void handle_enterlink(Client* client, const std::string& link_name) {
     join_room(client, room_name);
 }
 
+// 허가, 회수, 관리자 위임, 강퇴 같은 방 관리 명령을 처리합니다.
 void handle_permission_command(Client* client, const std::string& command, const std::string& target_nick) {
     std::string target = trim_copy(target_nick);
     if (target.empty()) {
@@ -585,6 +624,7 @@ void handle_permission_command(Client* client, const std::string& command, const
     }
 }
 
+// 현재 방의 타입, 소유자, 관리자, 허가 목록을 출력합니다.
 void handle_roominfo(Client* client) {
     pthread_mutex_lock(&state_mutex);
     Room room = rooms[client->room];
@@ -599,6 +639,7 @@ void handle_roominfo(Client* client) {
     send_to_client(client, oss.str());
 }
 
+// 개인별 자주 쓰는 문장 템플릿 추가, 삭제, 조회, 사용을 처리합니다.
 void handle_template_command(Client* client, const std::string& arg) {
     std::string rest;
     std::string subcommand = first_token(arg, &rest);
@@ -660,6 +701,7 @@ void handle_template_command(Client* client, const std::string& arg) {
     }
 }
 
+// 메시지에 이모지 반응을 등록하고 볼 수 있는 사용자에게 알립니다.
 void handle_react(Client* client, const std::string& arg) {
     std::string emoji;
     std::string id_text = first_token(arg, &emoji);
@@ -687,6 +729,7 @@ void handle_react(Client* client, const std::string& arg) {
     broadcast_for_message(record, oss.str());
 }
 
+// 특정 메시지에 등록된 이모지 반응 목록을 조회합니다.
 void handle_reactions(Client* client, const std::string& arg) {
     int id = atoi(trim_copy(arg).c_str());
     std::map<std::string, std::string> snapshot;
@@ -709,6 +752,7 @@ void handle_reactions(Client* client, const std::string& arg) {
     send_to_client(client, oss.str());
 }
 
+// 서버가 지원하는 명령어 목록을 클라이언트에게 전송합니다.
 void send_help(Client* client) {
     send_to_client(client,
         "[commands]\n"
@@ -722,6 +766,7 @@ void send_help(Client* client) {
         "/status_public <on|off>\n/profileof <nick>\n/leave\n/rooms\n/who\n/quit\n");
 }
 
+// 슬래시로 시작하는 클라이언트 명령을 파싱해 해당 처리 함수로 전달합니다.
 void handle_command(Client* client, const std::string& line) {
     std::string command;
     std::string arg;
@@ -851,6 +896,7 @@ void handle_command(Client* client, const std::string& line) {
     }
 }
 
+// 클라이언트 입력 한 줄을 명령 또는 채팅 메시지로 분기합니다.
 void handle_line(Client* client, const std::string& raw_line) {
     std::string line = trim_copy(raw_line);
     if (line.empty()) return;
@@ -861,6 +907,7 @@ void handle_line(Client* client, const std::string& raw_line) {
     send_chat_text(client, line);
 }
 
+// 클라이언트별 스레드에서 수신 루프와 접속 종료 처리를 담당합니다.
 void* handle_clnt(void* arg) {
     Client* client = static_cast<Client*>(arg);
     char buffer[BUFSIZE];
@@ -891,6 +938,7 @@ void* handle_clnt(void* arg) {
     return NULL;
 }
 
+// 서버 소켓을 열고 클라이언트 접속마다 처리 스레드를 생성하는 서버 진입점입니다.
 int main(int argc, char* argv[]) {
     if (argc < 2 || argc > 3) {
         printf("Usage : %s <port> [state_file]\n", argv[0]);

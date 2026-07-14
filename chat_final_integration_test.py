@@ -10,6 +10,7 @@ HOST = "127.0.0.1"
 PORT = 45683
 
 
+# 소켓에서 짧은 시간 동안 수신 가능한 데이터를 모아 문자열로 반환합니다.
 def read_some(sock, seconds=0.3):
     sock.settimeout(0.15)
     chunks = []
@@ -25,11 +26,13 @@ def read_some(sock, seconds=0.3):
     return "".join(chunks)
 
 
+# 테스트 클라이언트 소켓으로 한 줄 명령 또는 메시지를 전송합니다.
 def send_line(sock, line):
     sock.sendall((line + "\n").encode("utf-8"))
     time.sleep(0.2)
 
 
+# 테스트용 클라이언트 소켓을 만들고 초기 서버 알림을 비웁니다.
 def connect_client():
     sock = socket.create_connection((HOST, PORT), timeout=2)
     time.sleep(0.1)
@@ -37,6 +40,7 @@ def connect_client():
     return sock
 
 
+# 임시 상태 파일을 사용하는 테스트 서버 프로세스를 시작합니다.
 def start_server(state_file):
     return subprocess.Popen(
         ["./multi_server", str(PORT), state_file],
@@ -45,6 +49,7 @@ def start_server(state_file):
     )
 
 
+# 테스트 서버 프로세스를 정상 종료하고 필요하면 강제 종료합니다.
 def stop_server(proc):
     proc.terminate()
     try:

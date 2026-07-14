@@ -15,11 +15,13 @@
 
 std::atomic<bool> running(true);
 
+// 치명적인 오류 메시지를 출력하고 클라이언트를 종료합니다.
 void error_handling(const char* message) {
     perror(message);
     exit(1);
 }
 
+// 버퍼 전체가 소켓에 기록될 때까지 반복 전송합니다.
 bool send_all(int sock, const std::string& data) {
     const char* buf = data.c_str();
     size_t total = 0;
@@ -35,6 +37,7 @@ bool send_all(int sock, const std::string& data) {
     return true;
 }
 
+// 서버에서 수신한 메시지를 별도 스레드에서 계속 출력합니다.
 void* recv_msg(void* arg) {
     int sock = *static_cast<int*>(arg);
     char msg[BUFSIZE + 1];
@@ -52,6 +55,7 @@ void* recv_msg(void* arg) {
     return NULL;
 }
 
+// 클라이언트에서 사용할 수 있는 주요 명령어를 안내합니다.
 void print_usage() {
     std::cout
         << "클라이언트 명령어\n"
@@ -65,6 +69,7 @@ void print_usage() {
         << "명령어 없이 메시지를 입력하면 현재 방에 전송됩니다.\n";
 }
 
+// 서버에 접속하고 송신 루프와 수신 스레드를 관리하는 클라이언트 진입점입니다.
 int main(int argc, char* argv[]) {
     int sock;
     struct sockaddr_in serv_addr;
