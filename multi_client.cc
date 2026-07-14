@@ -59,16 +59,24 @@ void* recv_msg(void* arg) {
 void print_usage() {
     std::cout
         << "클라이언트 명령어\n"
-        << "  /nick <닉네임>     닉네임 설정\n"
-        << "  /profile <내용>    프로필/상태 메시지 설정\n"
-        << "  /create <방이름>   단체방 만들기\n"
-        << "  /join <방이름>     단체방 입장\n"
-        << "  /rooms             방 목록\n"
-        << "  /who               현재 방 사용자\n"
-        << "  /quit              종료\n"
-        << "명령어 없이 메시지를 입력하면 현재 방에 전송됩니다.\n";
+        << "  /help                         전체 서버 명령어\n"
+        << "  /register <id> <pw>, /login   계정 등록/로그인\n"
+        << "  /nick, /profile, /status      닉네임/프로필/접속상태\n"
+        << "  /create, /join, /leave        방 생성/입장/나가기\n"
+        << "  /create_secret, /join_secret  비밀방 생성/입장\n"
+        << "  /openlink, /enterlink         오픈링크 1:1 방\n"
+        << "  /set_link_password, /link_block 오픈링크 입장 제한\n"
+        << "  /request_speak, /approve      승인방 발언 요청/승인\n"
+        << "  /kick, /ban, /unban           강퇴/차단 관리\n"
+        << "  /history, /search, /since     메시지 ID 확인/검색/이후 보기\n"
+        << "  /reply, /edit, /delete        메시지 답장/수정/삭제\n"
+        << "  /pin, /unpin, /pinned         메시지 고정 관리\n"
+        << "  /react, /reactions            이모지 반응\n"
+        << "  /template                     자주 쓰는 문장 템플릿\n"
+        << "  /rooms, /who, /roominfo       방/사용자 정보\n"
+        << "  /quit                         종료\n"
+        << "명령어 없이 메시지를 입력하면 현재 방에 전송됩니다. 상세 목록은 /help 를 입력하세요.\n";
 }
-
 // 서버에 접속하고 송신 루프와 수신 스레드를 관리하는 클라이언트 진입점입니다.
 int main(int argc, char* argv[]) {
     int sock;
